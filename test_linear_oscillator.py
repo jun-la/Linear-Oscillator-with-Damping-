@@ -137,17 +137,18 @@ class TestLinearOscillatorSolver:
     def test_solve_symbolic_basic(self, underdamped_params):
         """Test basic symbolic solution."""
         solver = LinearOscillatorSolver(underdamped_params)
-        
+
         solution = solver.solve_symbolic()
-        
+
         # Check that solution is a SymPy expression
         assert isinstance(solution, sp.Expr)
-        
+
         # Check that solution contains time variable (handle both symbolic and numeric cases)
-        t = sp.Symbol('t')
         # The solution might be simplified to a numeric expression, which is also valid
         if hasattr(solution, 'free_symbols'):
-            assert t in solution.free_symbols
+            # Check if any symbol named 't' exists in the solution
+            symbol_names = {str(s) for s in solution.free_symbols}
+            assert 't' in symbol_names
         else:
             # If solution is simplified to a constant, that's also acceptable
             assert True
@@ -156,15 +157,18 @@ class TestLinearOscillatorSolver:
         """Test that symbolic solution respects initial conditions."""
         solver = LinearOscillatorSolver(underdamped_params)
         solution = solver.solve_symbolic()
-        
-        t = sp.Symbol('t')
-        
+
+        # Get the time symbol from the solution itself
+        t_symbols = [s for s in solution.free_symbols if str(s) == 't']
+        assert len(t_symbols) == 1, "Solution should contain exactly one 't' symbol"
+        t = t_symbols[0]
+
         # Check initial position
         initial_position = solution.subs(t, 0)
         # Convert to float for comparison
         initial_position_float = float(initial_position)
         assert abs(initial_position_float - underdamped_params.initial_position) < 1e-10
-        
+
         # Check initial velocity
         derivative = sp.diff(solution, t)
         initial_velocity = derivative.subs(t, 0)
